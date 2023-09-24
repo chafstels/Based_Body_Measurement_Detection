@@ -4,6 +4,7 @@ from .models import ImagePrediction
 from .serializers import ImagePredictionSerializer
 from roboflow import Roboflow
 from decouple import config
+import tempfile
 
 
 def body_measurement(image):
@@ -23,12 +24,25 @@ class ImagePredictionView(generics.CreateAPIView):
     serializer_class = ImagePredictionSerializer
 
     def create(self, request, *args, **kwargs):
-        image = request.data.get("image")
+        image_file = request.data.get("image")
 
-        predictions = body_measurement(image)
+        if image_file:
+            with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+                temp_file.write(image_file.read())
+                temp_file.flush()
+                temp_file_path = temp_file.name
 
-        image_prediction = ImagePrediction(image=image, predictions=predictions)
-        image_prediction.save()
+                predictions = body_measurement(temp_file_path)
 
-        serializer = ImagePredictionSerializer(image_prediction)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                image_prediction = ImagePrediction(
+                    image=image_file, predictions=predictions
+                )
+                image_prediction.save()
+
+                serializer = ImagePredictionSerializer(image_prediction)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                {"message": "The image file has not been transferred."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
