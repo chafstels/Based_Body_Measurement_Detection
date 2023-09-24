@@ -1,6 +1,7 @@
 from roboflow import Roboflow
+from decouple import config
 
-rf = Roboflow(api_key="bZybpgq1ZaXVZNo9RL7Y")
+rf = Roboflow(api_key=config("API_KEY"))
 project = rf.workspace().project("body-measurement-zmbgv")
 model = project.version(1).model
 
